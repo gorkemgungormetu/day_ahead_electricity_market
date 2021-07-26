@@ -9,24 +9,24 @@ Sets
 Offer_ID        The ID number of bidders
 Segment_ID       Number of bids for each bidder
 Hour_ID          The period of the bid for single and block offers
-Teklif_Tipi      Offer type with 'S' for single 'B' for block and 'F' for flexible
+Offer_Type      Offer type with 'S' for single 'B' for block and 'F' for flexible
 Data_File             Data with x1 for quantity of supply (negative) or demand (positive) x2 for price x3 for period and x4 for precondition of block offers
 phase            Calculation of objective function for each phase /single,block,final/
 ;
 
 * Data is used for reading the inputs and data_new is used for solving for each hour independently
 Parameter
-data(Offer_ID,Segment_ID,Hour_ID,Teklif_Tipi,Data_File)      Test data
-data_new(Offer_ID,Segment_ID,Teklif_Tipi,Data_File)          Seperating data for solving each hour seperately due to program limitations
-hourly(Offer_ID,Teklif_Tipi)                            Condition for selecting maximum one bid frome each bidder
+data(Offer_ID,Segment_ID,Hour_ID,Offer_Type,Data_File)      Test data
+data_new(Offer_ID,Segment_ID,Offer_Type,Data_File)          Seperating data for solving each hour seperately due to program limitations
+hourly(Offer_ID,Offer_Type)                            Condition for selecting maximum one bid frome each bidder
 PTF                      Market exchange price
 PTF_old(Hour_ID)         Previous market exchange price for iteration
 PTF_new(Hour_ID)         Market exhange price after block offers
 PTF_final(Hour_ID)       Market exchange price after including all offers
-PTF_hourly(Offer_ID,Segment_ID,Hour_ID,Teklif_Tipi)        Average market exchange price for comparing with block offers
-PTF_ave(Offer_ID,Segment_ID,Teklif_Tipi)        Average market exchange price for comparing with block offers
-Qs(phase,Hour_ID,Teklif_Tipi)       Total supply for each hour
-Qd(phase,Hour_ID,Teklif_Tipi)       Total demand for each hour
+PTF_hourly(Offer_ID,Segment_ID,Hour_ID,Offer_Type)        Average market exchange price for comparing with block offers
+PTF_ave(Offer_ID,Segment_ID,Offer_Type)        Average market exchange price for comparing with block offers
+Qs(phase,Hour_ID)       Total supply for each hour
+Qd(phase,Hour_ID)       Total demand for each hour
 report   Storing accepted offers for each hour
 report_final     Final report for exporting to Excel
 best_obj(phase)         Total social surplus from bidding;
@@ -45,7 +45,7 @@ $gdxIn %Data_File%%file%.gdx
 $load Offer_ID = Dim1
 $load Segment_ID = Dim2
 $load Hour_ID = Dim3
-$load Teklif_Tipi = Dim4
+$load Offer_Type = Dim4
 $load Data_File = Dim5
 * x1 is amount of electricity (positive for demand and negative for supply) and x2 is price
 $load data
@@ -53,7 +53,7 @@ $gdxIn
 
 * Variable used for selecting maximum one proposal from all IDs
 Binary variable
-x(Offer_ID,Segment_ID,Teklif_Tipi) choice for selecting bids;
+x(Offer_ID,Segment_ID,Offer_Type) choice for selecting bids;
 
 * The social surplus received from trading
 Variable
@@ -70,11 +70,11 @@ Option ResLim = 100;
 alias(Hour_ID,Hour);
 
 * The objective function takes maximum values for demand and negative values for supply in accordance with economics
-obj..   z =e= sum[(Offer_ID,Segment_ID,Teklif_Tipi),x(Offer_ID,Segment_ID,Teklif_Tipi)*[data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x2')-PTF]*data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')];
+obj..   z =e= sum[(Offer_ID,Segment_ID,Offer_Type),x(Offer_ID,Segment_ID,Offer_Type)*[data_new(Offer_ID,Segment_ID,Offer_Type,'x2')-PTF]*data_new(Offer_ID,Segment_ID,Offer_Type,'x1')];
 * Maximum one offer can be accepted from all IDs
-agents(Offer_ID,Teklif_Tipi)$hourly(Offer_ID,Teklif_Tipi).. sum[Segment_ID,x(Offer_ID,Segment_ID,Teklif_Tipi)$data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')] =l= 1;
+agents(Offer_ID,Offer_Type)$hourly(Offer_ID,Offer_Type).. sum[Segment_ID,x(Offer_ID,Segment_ID,Offer_Type)$data_new(Offer_ID,Segment_ID,Offer_Type,'x1')] =l= 1;
 * The supply for each hour must be greater than demand
-balance.. sum[(Offer_ID,Segment_ID,Teklif_Tipi),data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')*x(Offer_ID,Segment_ID,Teklif_Tipi)] =e= 0;
+balance.. sum[(Offer_ID,Segment_ID,Offer_Type),data_new(Offer_ID,Segment_ID,Offer_Type,'x1')*x(Offer_ID,Segment_ID,Offer_Type)] =e= 0;
 * Market exchange price for all selected bids
 
 Model day_ahead_market /all/;
@@ -98,18 +98,18 @@ Display PTF;
 Solve day_ahead_market using mip maximizing z;
 * Calculating new market exchange price for iteration
 PTF_old(Hour) = PTF;
-PTF = z.l/sum[(Offer_ID,Segment_ID,Teklif_Tipi),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*abs{data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')}];
+PTF = z.l/sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*abs{data_new(Offer_ID,Segment_ID,Offer_Type,'x1')}];
 * Iteration until market exchange price converges
 while (abs(PTF-PTF_old(Hour))>10,
 Solve day_ahead_market using mip maximizing z;
 PTF_old(Hour) = PTF;
-PTF = z.l/sum[(Offer_ID,Segment_ID,Teklif_Tipi),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*abs{data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')}];
+PTF = z.l/sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*abs{data_new(Offer_ID,Segment_ID,Offer_Type,'x1')}];
 Display PTF_old;
 );
 * Storing market exchange prices for each hour
 PTF_old(Hour) = PTF;
-Qs('single',Hour,Teklif_Tipi) = sum[(Offer_ID,Segment_ID),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')$(data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')<0)];
-Qd('single',Hour,Teklif_Tipi) = sum[(Offer_ID,Segment_ID),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')$(data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')>0)];
+Qs('single',Hour) = sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*data_new(Offer_ID,Segment_ID,Offer_Type,'x1')$(data_new(Offer_ID,Segment_ID,Offer_Type,'x1')<0)];
+Qd('single',Hour) = sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*data_new(Offer_ID,Segment_ID,Offer_Type,'x1')$(data_new(Offer_ID,Segment_ID,Offer_Type,'x1')>0)];
 * Displaying the objective value and accepted offers of IDs
 best_obj('single') = best_obj('single') + z.l;
 );
@@ -146,12 +146,12 @@ x.fx(Offer_ID,Segment_ID,'B')$data_new(Offer_ID,Segment_ID,'B','x4') = smax[Cond
 x.fx(Offer_ID,Segment_ID,'B')$data_new(Offer_ID,Segment_ID,'B','x3') = [{data_new(Offer_ID,Segment_ID,'B','x2')-PTF_ave(Offer_ID,Segment_ID,'B')}*data_new(Offer_ID,Segment_ID,'B','x1') ge 0];
 * Calculating new market exchange price for iteration
 PTF_new(Hour) = PTF;
-PTF = z.l/sum[(Offer_ID,Segment_ID,Teklif_Tipi),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*abs{data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')}];
+PTF = z.l/sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*abs{data_new(Offer_ID,Segment_ID,Offer_Type,'x1')}];
 * Iteration until market exchange price converges
 while (abs(PTF-PTF_new(Hour))>10,
 Solve day_ahead_market using mip maximizing z;
 PTF_new(Hour) = PTF;
-PTF = z.l/sum[(Offer_ID,Segment_ID,Teklif_Tipi),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*abs{data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')}];
+PTF = z.l/sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*abs{data_new(Offer_ID,Segment_ID,Offer_Type,'x1')}];
 );
 * Expanding the data to further hours for block offers
 data(Offer_ID,Segment_ID,Hour+1,'B','x1')$[data(Offer_ID,Segment_ID,Hour,'B','x3')>1] = data(Offer_ID,Segment_ID,Hour,'B','x1');
@@ -160,8 +160,8 @@ data(Offer_ID,Segment_ID,Hour+1,'B','x3')$[data(Offer_ID,Segment_ID,Hour,'B','x3
 data(Offer_ID,Segment_ID,Hour+1,'B','x4')$[data(Offer_ID,Segment_ID,Hour,'B','x3')>1] = data(Offer_ID,Segment_ID,Hour,'B','x4');
 * Storing market exchange prices for each hour
 PTF_new(Hour) = PTF;
-Qs('block',Hour,Teklif_Tipi) = sum[(Offer_ID,Segment_ID),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')$(data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')<0)];
-Qd('block',Hour,Teklif_Tipi) = sum[(Offer_ID,Segment_ID),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')$(data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')>0)];
+Qs('block',Hour) = sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*data_new(Offer_ID,Segment_ID,Offer_Type,'x1')$(data_new(Offer_ID,Segment_ID,Offer_Type,'x1')<0)];
+Qd('block',Hour) = sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*data_new(Offer_ID,Segment_ID,Offer_Type,'x1')$(data_new(Offer_ID,Segment_ID,Offer_Type,'x1')>0)];
 report(Offer_ID,'B',Hour)= x.l(Offer_ID,'1','B')$hourly(Offer_ID,'B')*[Hour.val-smax[Hour_ID,data(Offer_ID,'1',Hour_ID,'B','x3')]+1];
 * Displaying the objective value and accepted offers of IDs
 best_obj('block') = best_obj('block') + z.l;
@@ -188,22 +188,22 @@ PTF = PTF_new(Hour);
 * First solve for the initial market exchange price
 Solve day_ahead_market using mip maximizing z;
 PTF_final(Hour) = PTF;
-PTF = z.l/sum[(Offer_ID,Segment_ID,Teklif_Tipi),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*abs{data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')}];
+PTF = z.l/sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*abs{data_new(Offer_ID,Segment_ID,Offer_Type,'x1')}];
 * Iteration until market exchange price converges
 while (abs(PTF-PTF_final(Hour))>10,
 Solve day_ahead_market using mip maximizing z;
 * Calculating new market exchange price for iteration
 PTF_final(Hour) = PTF;
-PTF = z.l/sum[(Offer_ID,Segment_ID,Teklif_Tipi),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*abs{data_new(Offer_ID,Segment_ID,Teklif_Tipi,'x1')}];
+PTF = z.l/sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*abs{data_new(Offer_ID,Segment_ID,Offer_Type,'x1')}];
 );
 PTF_final(Hour) = PTF;
 * Storing aggregated supply and demand for each hour
-Qs('final',Hour,Teklif_Tipi) = sum[(Offer_ID,Segment_ID),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*data(Offer_ID,Segment_ID,Hour,Teklif_Tipi,'x1')$(data(Offer_ID,Segment_ID,Hour,Teklif_Tipi,'x1')<0)];
-Qd('final',Hour,Teklif_Tipi) = sum[(Offer_ID,Segment_ID),x.l(Offer_ID,Segment_ID,Teklif_Tipi)*data(Offer_ID,Segment_ID,Hour,Teklif_Tipi,'x1')$(data(Offer_ID,Segment_ID,Hour,Teklif_Tipi,'x1')>0)];
+Qs('final',Hour) = sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*data(Offer_ID,Segment_ID,Hour,Offer_Type,'x1')$(data(Offer_ID,Segment_ID,Hour,Offer_Type,'x1')<0)];
+Qd('final',Hour) = sum[(Offer_ID,Segment_ID,Offer_Type),x.l(Offer_ID,Segment_ID,Offer_Type)*data(Offer_ID,Segment_ID,Hour,Offer_Type,'x1')$(data(Offer_ID,Segment_ID,Hour,Offer_Type,'x1')>0)];
 report(Offer_ID,'F',Hour)= x.l(Offer_ID,'1','F')$hourly(Offer_ID,'F')*Hour.val;
 );
 
-report_final(Offer_ID) = smax[(Hour,Teklif_Tipi),report(Offer_ID,Teklif_Tipi,Hour)];
+report_final(Offer_ID) = smax[(Hour,Offer_Type),report(Offer_ID,Offer_Type,Hour)];
 
 execute_unload "%gdxout%%file%_final.gdx" report_final;
 
