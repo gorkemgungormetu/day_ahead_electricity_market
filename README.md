@@ -1,4 +1,4 @@
-# day_ahead_market 
+# GAMS code for auctioning in day-ahead electricity market 
 The GAMS model uses CPLEX solver with MIP to maximize the social surplus in the day-ahead electricity market. The market clearance is subject to the acceptance or rejection of bidding offers (maximum one offer can be accepted from each bidder) and the hourly balance of electricity supply and demand. The market exchange price is used as a parameter in the objective function with an initial dummy value
 and iterated until the maximum social surplus is reached.
 
